@@ -16,9 +16,11 @@ class Communicate(QObject):
 class Comm2(QObject):
     signal = pyqtSignal(int)
 
+# 인스타그램 API에서 5초마다 정보를 얻어오는 쓰레드
 class InstagramInfoThread(threading.Thread):
     def __init__(self, username, callbackFunc, *args, **kwargs):
         super(InstagramInfoThread, self).__init__(*args, **kwargs)
+        # 변수 기본값 설정
         self.username = username
         self.stopped = False
         self.context = ssl._create_unverified_context()
@@ -31,11 +33,13 @@ class InstagramInfoThread(threading.Thread):
         self.communicate = Communicate()
         self.callbackFunc = callbackFunc
     def stop(self):
+        # 쓰레드 정지 코드
         self.stopped = True
     def run(self):
-        self.communicate.signal.connect(self.callbackFunc)
-        while not self.stopped:
+        self.communicate.signal.connect(self.callbackFunc) # GUI 프로그램과 통신할 수 있게 한다
+        while not self.stopped: # 정지하지 않은 때동안
             try:
+                # 주어진 아이디를 토대로 정보를 가지고 온다
                 url = f'https://www.instagram.com/{self.username}/?__a=1'
                 result = urlopen(url, context=self.context).read()
                 data = json.loads(result)
@@ -56,6 +60,7 @@ class InstagramInfoThread(threading.Thread):
                 self.posts = None
                 self.profileImg = None
                 print(e)
+            # 얻은 정보를 GUI 프로그램으로 보낸다
             msg = {
                 'fullname':self.fullname,
                 'username':self.username,
@@ -76,12 +81,14 @@ class InstagramInfoThread(threading.Thread):
                 continue
             break
         print(f'{threading.currentThread().getName()} stopped')
+    # 디버깅을 위해 정보를 출력하는 코드
     def log_info(self, fullname, username, biography, followers, following, posts):
         print(f'{username} ({fullname})')
         print('-----Biography-----')
         print(biography)
         print('-----INFO-----')
         print(f'{followers} Followers {following} Following {posts} Posts')
+# 게시물을 표시하는 창 (개발 중지)
 """
 class PostsWindow(QMainWindow):
     def __init__(self, username, callbackFunc, parent=None):
@@ -98,6 +105,7 @@ class PostsWindow(QMainWindow):
         event.accept()
 """
 
+# 본 윈도우 (프로필사진, 팔로워,팔로잉,게시물 표시)
 class MyWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -136,6 +144,7 @@ class MyWindow(QMainWindow):
         self.button.clicked.connect(self.showPosts)
         self.context = ssl._create_unverified_context()
 
+    # 쓰레드로부터 데이터가 들어왔을 때 표시
     def dataCallback(self, msg):
         if msg['followers']:
             followers = msg['followers']
@@ -172,6 +181,7 @@ class MyWindow(QMainWindow):
         else:
             self.posts.setText('게시물 정보없음')
 
+    # 닫힐 때 쓰레드 정지하고 종료
     def closeEvent(self, event):
         self.thread.stop()
         event.accept()
@@ -182,6 +192,7 @@ class MyWindow(QMainWindow):
     """
 
 
+    # 시작 시 아이디 물어보기
     def popup(self):
         text, ok = QInputDialog.getText(self, 'Instagram Display 1.0', '환영합니다!\n우선 인스타그램 닉네임을 알려주십시오.')
         if ok:
@@ -205,6 +216,7 @@ class MyWindow(QMainWindow):
             x = msg.exec_()
             self.popup()
 
+    # 게시물 표시 (브라우저 띄음)
     def showPosts(self):
         """
         if self.isSecondClosed:
@@ -220,6 +232,7 @@ class MyWindow(QMainWindow):
         """
         webbrowser.open('https://www.instagram.com/yeonho_08/', new=1, autoraise=True)
 
+# import한 경우가 아니라 직접 실행한 경우 GUI까지 띄움
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     myWindow = MyWindow()
